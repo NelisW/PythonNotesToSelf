@@ -1,2 +1,4 @@
 /PlayReportLab.ipynb
 *.html
+/.ipynb_checkpoints
+/.idea
