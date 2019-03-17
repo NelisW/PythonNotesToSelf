@@ -26,6 +26,7 @@ import dash
 import dash_core_components as dcc
 import dash_html_components as html
 
+import pandas as pd
 
 def run_dash(dataSource,mode):
 
@@ -36,36 +37,46 @@ def run_dash(dataSource,mode):
     app.css.config.serve_locally = True
     app.scripts.config.serve_locally = True
 
+    filename = 'data/tp05j2a.rgeo'
+    df = pd.read_csv(filename, sep='\s+',index_col=None)
+    print(df.columns)
+    print(df.head())
+    # CurrentSimTime     Rel-distance  Rel-speed
 
-    # some dummy data for now
-    data = [
-        {'x': [1, 2, 3], 'y': [4, 1, 2], 'type': 'bar', 'name': 'SF'},
-        {'x': [1, 2, 3], 'y': [2, 4, 5], 'type': 'bar', 'name': u'Montréal'},
-        
-        ]
-    layout = {
-        'title': 'Dash Data Visualization'
-    }
-    demograph = {'id':'example-graph',
+    demograph1 = {'id':'Relative position',
                 'figure':{
-                    'data': data,
-                    'layout': layout
+                    'data': [
+                        {'x':df['%CurrentSimTime'], 'y':df['Rel-distance'], 'type': 'bar', 'name': 'Position'},
+                        ],
+                    'layout':  {
+                        'title': 'Relative position'
+                        }
                     }
                 }
 
+
+    demograph2 = {'id':'Relative speed',
+                'figure':{
+                    'data': [
+                        {'x':df['%CurrentSimTime'], 'y':df['Rel-speed'], 'type': 'bar', 'name': u'Speed'},
+                        ],
+                    'layout':  {
+                        'title': 'Relative speed'
+                        }
+                    }
+                }
+
+
     # build a page for display
     app.layout = html.Div(children=[
-        html.H1(children='Hello Dash'),
+        html.H1(children='Dash Experiments'),
 
-        html.Div(children='''
-            Dash: A web application framework for Python.
-        '''),
+        # html.Div([dcc.Markdown(children='''Attempting to use *Dash* for plotting in PyQt5.''')]),
 
-        html.Div(children='''
-            Hopefully this can grow later.
-        '''),
 
-        dcc.Graph(id=demograph['id'],figure=demograph['figure'])
+        dcc.Graph(id=demograph1['id'],figure=demograph1['figure']),
+
+        dcc.Graph(id=demograph2['id'],figure=demograph2['figure'])
 
         ])
 
