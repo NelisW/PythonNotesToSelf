@@ -1,4 +1,6 @@
 """
+https://github.com/plotly/dash-recipes
+https://github.com/plotly/dash-recipes/blob/master/multiple-hover-data.py
 
 conda config --add channels conda-forge
 conda search dash-daq --channel conda-forge
@@ -25,6 +27,7 @@ from PyQt5 import QtWebEngineWidgets
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
+import plotly.graph_objs as go
 
 import pandas as pd
 
@@ -43,25 +46,32 @@ def run_dash(dataSource,mode):
     print(df.head())
     # CurrentSimTime     Rel-distance  Rel-speed
 
-    demograph1 = {'id':'Relative position',
+    demograph1 = {'id':'position',
                 'figure':{
                     'data': [
-                        {'x':df['%CurrentSimTime'], 'y':df['Rel-distance'], 'type': 'bar', 'name': 'Position'},
+                        {'x':df['%CurrentSimTime'], 'y':df['Rel-distance'], 'type': 'line', 'name': 'Distance'},
+                        {'x':df['%CurrentSimTime'], 'y':df['Rel-loc-World[0]'], 'type': 'line', 'name': 'X'},
+                        {'x':df['%CurrentSimTime'], 'y':df['Rel-loc-World[1]'], 'type': 'line', 'name': 'Y'},
+                        {'x':df['%CurrentSimTime'], 'y':df['Rel-loc-World[2]'], 'type': 'line', 'name': 'Z'},
+
                         ],
                     'layout':  {
-                        'title': 'Relative position'
+                        'title': 'Position'
                         }
                     }
                 }
 
 
-    demograph2 = {'id':'Relative speed',
+    demograph2 = {'id':'speed',
                 'figure':{
                     'data': [
-                        {'x':df['%CurrentSimTime'], 'y':df['Rel-speed'], 'type': 'bar', 'name': u'Speed'},
+                        {'x':df['%CurrentSimTime'], 'y':df['Rel-speed'], 'type': 'line', 'name': u'Speed'},
+                        {'x':df['%CurrentSimTime'], 'y':df['Rel-vel-World[0]'], 'type': 'line', 'name': u'Vx'},
+                        {'x':df['%CurrentSimTime'], 'y':df['Rel-vel-World[1]'], 'type': 'line', 'name': u'Vy'},
+                        {'x':df['%CurrentSimTime'], 'y':df['Rel-vel-World[2]'], 'type': 'line', 'name': u'Vz'},
                         ],
                     'layout':  {
-                        'title': 'Relative speed'
+                        'title': 'Speed'
                         }
                     }
                 }
@@ -80,10 +90,34 @@ def run_dash(dataSource,mode):
 
         ])
 
-    # locationUrl = dcc.Location(id="url", refresh=False)
-    # print(f'Serving at URL at {locationUrl}')
 
-    app.run_server(debug=False)
+
+    # @app.callback(Output('Relative position', 'hoverData'), events=[Event('Relative speed', 'hover')])
+    # def resetHoverData1():
+    #     return None
+
+
+    # @app.callback(Output('Relative speed', 'hoverData'), events=[Event('Relative position', 'hover')])
+    # def resetHoverData2():
+    #     return None
+
+
+    # import plotly.tools as tls
+
+    # fig = tls.make_subplots(rows=2, cols=1, shared_xaxes=True,vertical_spacing=0.009,horizontal_spacing=0.009)
+    # fig['layout']['margin'] = {'l': 30, 'r': 10, 'b': 50, 't': 25}
+
+    # fig.append_trace({'x':df['%CurrentSimTime'],'y':df['Rel-distance'],'type':'scatter','name':'Distance'},1,1)
+    # fig.append_trace({'x':df['%CurrentSimTime'],'y':df['Rel-loc-World[0]'],'type':'scatter','name':'X'},1,1)
+    # fig.append_trace({'x':df['%CurrentSimTime'],'y':df['Rel-loc-World[1]'],'type':'scatter','name':'Y'},1,1)
+    # fig.append_trace({'x':df['%CurrentSimTime'],'y':df['Rel-loc-World[2]'],'type':'scatter','name':'Z'},1,1)
+    # fig.append_trace({'x':df['%CurrentSimTime'],'y':df['Rel-speed'],'type':'scatter','name':'Speed'},2,1)
+
+    app.css.append_css({
+        'external_url': 'https://codepen.io/chriddyp/pen/bWLwgP.css'
+    })
+
+    app.run_server(debug=False,port=8050)
 
 
 class WebViewer(QtWebEngineWidgets.QWebEngineView):
