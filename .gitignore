@@ -2,3 +2,4 @@
 *.html
 /.ipynb_checkpoints
 /.idea
+/ignore

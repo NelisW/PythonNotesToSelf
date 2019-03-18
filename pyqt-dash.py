@@ -1,11 +1,11 @@
 """
 https://github.com/plotly/dash-recipes
 https://github.com/plotly/dash-recipes/blob/master/multiple-hover-data.py
+https://plot.ly/python/subplots/
+
 
 conda config --add channels conda-forge
 conda search dash-daq --channel conda-forge
-
-
 
 
 conda install dash
@@ -27,7 +27,10 @@ from PyQt5 import QtWebEngineWidgets
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
-import plotly.graph_objs as go
+from dash.dependencies import Input, Output
+
+# import plotly.graph_objs as go
+
 
 import pandas as pd
 
@@ -42,9 +45,8 @@ def run_dash(dataSource,mode):
 
     filename = 'data/tp05j2a.rgeo'
     df = pd.read_csv(filename, sep='\s+',index_col=None)
-    print(df.columns)
-    print(df.head())
-    # CurrentSimTime     Rel-distance  Rel-speed
+    # print(df.columns)
+    # print(df.head())
 
     demograph1 = {'id':'position',
                 'figure':{
@@ -53,12 +55,12 @@ def run_dash(dataSource,mode):
                         {'x':df['%CurrentSimTime'], 'y':df['Rel-loc-World[0]'], 'type': 'line', 'name': 'X'},
                         {'x':df['%CurrentSimTime'], 'y':df['Rel-loc-World[1]'], 'type': 'line', 'name': 'Y'},
                         {'x':df['%CurrentSimTime'], 'y':df['Rel-loc-World[2]'], 'type': 'line', 'name': 'Z'},
-
                         ],
                     'layout':  {
-                        'title': 'Position'
+                        'title': 'Position',
+                        'height': '300'
                         }
-                    }
+                    } 
                 }
 
 
@@ -71,8 +73,11 @@ def run_dash(dataSource,mode):
                         {'x':df['%CurrentSimTime'], 'y':df['Rel-vel-World[2]'], 'type': 'line', 'name': u'Vz'},
                         ],
                     'layout':  {
-                        'title': 'Speed'
+                        'title': 'Speed',
                         }
+                    },
+                'style':  {
+                    'height': '300'
                     }
                 }
 
@@ -81,41 +86,18 @@ def run_dash(dataSource,mode):
     app.layout = html.Div(children=[
         html.H1(children='Dash Experiments'),
 
-        # html.Div([dcc.Markdown(children='''Attempting to use *Dash* for plotting in PyQt5.''')]),
-
+        html.Div([dcc.Markdown(children='''Attempting to use *Dash* for plotting in PyQt5.''')]),
 
         dcc.Graph(id=demograph1['id'],figure=demograph1['figure']),
 
-        dcc.Graph(id=demograph2['id'],figure=demograph2['figure'])
+        dcc.Graph(id=demograph2['id'],figure=demograph2['figure'],style=demograph2['style'])
 
         ])
 
 
-
-    # @app.callback(Output('Relative position', 'hoverData'), events=[Event('Relative speed', 'hover')])
-    # def resetHoverData1():
-    #     return None
-
-
-    # @app.callback(Output('Relative speed', 'hoverData'), events=[Event('Relative position', 'hover')])
-    # def resetHoverData2():
-    #     return None
-
-
-    # import plotly.tools as tls
-
-    # fig = tls.make_subplots(rows=2, cols=1, shared_xaxes=True,vertical_spacing=0.009,horizontal_spacing=0.009)
-    # fig['layout']['margin'] = {'l': 30, 'r': 10, 'b': 50, 't': 25}
-
-    # fig.append_trace({'x':df['%CurrentSimTime'],'y':df['Rel-distance'],'type':'scatter','name':'Distance'},1,1)
-    # fig.append_trace({'x':df['%CurrentSimTime'],'y':df['Rel-loc-World[0]'],'type':'scatter','name':'X'},1,1)
-    # fig.append_trace({'x':df['%CurrentSimTime'],'y':df['Rel-loc-World[1]'],'type':'scatter','name':'Y'},1,1)
-    # fig.append_trace({'x':df['%CurrentSimTime'],'y':df['Rel-loc-World[2]'],'type':'scatter','name':'Z'},1,1)
-    # fig.append_trace({'x':df['%CurrentSimTime'],'y':df['Rel-speed'],'type':'scatter','name':'Speed'},2,1)
-
-    app.css.append_css({
-        'external_url': 'https://codepen.io/chriddyp/pen/bWLwgP.css'
-    })
+    # app.css.append_css({
+    #     'external_url': 'https://codepen.io/chriddyp/pen/bWLwgP.css'
+    # })
 
     app.run_server(debug=False,port=8050)
 
