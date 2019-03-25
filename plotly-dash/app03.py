@@ -42,12 +42,9 @@ quotes, and more.
 app.layout = html.Div([
     dcc.Markdown(children=markdown_text)
     ,
-    html.Div(
-        className="row",
-        children=[
-            html.Div(
-                className="six columns",
-                children=[html.Div(
+    html.Div([
+                    html.Div([
+                    html.H3('Life expectancy vs GDP'),
                     dcc.Graph(
                         id='life-exp-vs-gdp',
                         figure={
@@ -74,44 +71,15 @@ app.layout = html.Div([
                             )
                         }
                     )
-            )
-                ],
-            )
+                    ], className="six columns")
         ,
-            html.Div(
-                className="six columns",
-                children=[html.Div(
-                    dcc.Graph(
-                        id='life-exp-vs-gdp2',
-                        figure={
-                            'data': [
-                                go.Scatter(
-                                    x=df[df['continent'] == i]['gdp per capita'],
-                                    y=df[df['continent'] == i]['life expectancy'],
-                                    text=df[df['continent'] == i]['country'],
-                                    mode='markers',
-                                    opacity=0.8,
-                                    marker={
-                                        'size': 15,
-                                        'line': {'width': 0.5, 'color': 'white'}
-                                    },
-                                    name=i
-                                ) for i in df.continent.unique()
-                            ],
-                            'layout': go.Layout(
-                                xaxis={'type': 'log', 'title': 'GDP Per Capita'},
-                                yaxis={'title': 'Life Expectancy'},
-                                margin={'l': 40, 'b': 40, 't': 10, 'r': 10},
-                                legend={'x': 0, 'y': 1},
-                                hovermode='closest',
-                            )
-                        }
-                    )
-                )
-                ],
-            ),
-        ]
-        ),
+            html.Div([
+                html.H3('Life expectancy vs GDP'),
+                dcc.Graph(id='g2', figure={'data': [{'y': [1, 2, 3]}]})
+                ], className="six columns"),
+        ],className="row"
+        )
+        ,
     dcc.Dropdown(
             options=[
                 {'label': 'New York City', 'value': 'NYC'},
