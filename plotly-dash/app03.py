@@ -43,8 +43,9 @@ app.layout = html.Div([
     dcc.Markdown(children=markdown_text)
     ,
     html.Div([
-                    html.Div([
+                    html.Div(children=[
                     html.H3('Life expectancy vs GDP'),
+                # dcc.Graph(id='g1', figure={'data': [{'y': [1, 2, 3]}]})
                     dcc.Graph(
                         id='life-exp-vs-gdp',
                         figure={
@@ -73,13 +74,16 @@ app.layout = html.Div([
                     )
                     ], className="six columns")
         ,
-            html.Div([
-                html.H3('Life expectancy vs GDP'),
+            html.Div(children=[
+                html.H3('Simple line plot'),
                 dcc.Graph(id='g2', figure={'data': [{'y': [1, 2, 3]}]})
                 ], className="six columns"),
         ],className="row"
         )
-        ,
+    ,
+    html.Div([
+                    html.Div(children=[
+                    html.H3('Dropdown box'),
     dcc.Dropdown(
             options=[
                 {'label': 'New York City', 'value': 'NYC'},
@@ -88,8 +92,9 @@ app.layout = html.Div([
             ],
             value='MTL'
         ) 
-    ,
-    html.Label('Multi-Select Dropdown'),
+                    ], className="six columns")
+        ,
+            html.Div(children=[ html.H3('Multi-Select Dropdown box'),
         dcc.Dropdown(
             options=[
                 {'label': 'New York City', 'value': 'NYC'},
@@ -98,7 +103,11 @@ app.layout = html.Div([
             ],
             value=['MTL', 'SF'],
             multi=True
+        )                ], className="six columns"),
+        ],className="row"
         )
+
+
         ,
     html.Label('Radio Items'),
         dcc.RadioItems(
@@ -144,8 +153,9 @@ app.layout = html.Div([
 ])
 
 
-app.css.append_css({'external_url': 'https://codepen.io/chriddyp/pen/bWLwgP.css'})
-
+# app.css.append_css({'external_url': 'https://codepen.io/chriddyp/pen/bWLwgP.css'})
+# app.css.append_css({'external_url': './css/bWLwgP.css'})
+# dcc._css_dist[0]['relative_package_path'].append('css/bWLwgP.css')
 
 if __name__ == '__main__':
     app.run_server()
