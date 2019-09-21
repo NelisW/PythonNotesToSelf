@@ -20,6 +20,8 @@ conda install dash-daq
 import sys
 import threading
 
+# import json
+
 from PyQt5 import QtWidgets
 import PyQt5.QtCore as QtCore
 from PyQt5 import QtWebEngineWidgets
@@ -34,72 +36,120 @@ from dash.dependencies import Input, Output
 
 import pandas as pd
 
-def run_dash(dataSource,mode):
+
+def makedccgraph(gid, height, title, data):
+    dccgraph = dcc.Graph(
+                id=gid,
+                figure={'layout':{'title':title},'data':data},
+                style={'height': str(height)},
+            )
+    return dccgraph
+
+
+def run_dash(dataSource, mode):
 
     # start a dash app, which also starts a Flask server
     app = dash.Dash()
 
-    # override security restrictions: allow the serving of local pages 
+    # override security restrictions: allow the serving of local pages
     app.css.config.serve_locally = True
     app.scripts.config.serve_locally = True
 
-    filename = 'data/tp05j2a.rgeo'
-    df = pd.read_csv(filename, sep='\s+',index_col=None)
-    # print(df.columns)
+    filename = "data/tp05j2a.rgeo"
+    df = pd.read_csv(filename, sep="\s+", index_col=None)
+    print(df.columns)
     # print(df.head())
 
-    demograph1 = {'id':'position',
-                'figure':{
-                    'data': [
-                        {'x':df['%CurrentSimTime'], 'y':df['Rel-distance'], 'type': 'line', 'name': 'Distance'},
-                        {'x':df['%CurrentSimTime'], 'y':df['Rel-loc-World[0]'], 'type': 'line', 'name': 'X'},
-                        {'x':df['%CurrentSimTime'], 'y':df['Rel-loc-World[1]'], 'type': 'line', 'name': 'Y'},
-                        {'x':df['%CurrentSimTime'], 'y':df['Rel-loc-World[2]'], 'type': 'line', 'name': 'Z'},
-                        ],
-                    'layout':  {
-                        'title': 'Position',
-                        'height': '300'
-                        }
-                    } 
-                }
+    grpData1 = [
+        {
+            "x": df["%CurrentSimTime"],
+            "y": df["Rel-distance"],
+            "type": "line",
+            "name": "Distance",
+        },
+        {
+            "x": df["%CurrentSimTime"],
+            "y": df["Rel-loc-World[0]"],
+            "type": "line",
+            "name": "X",
+        },
+        {
+            "x": df["%CurrentSimTime"],
+            "y": df["Rel-loc-World[1]"],
+            "type": "line",
+            "name": "Y",
+        },
+        {
+            "x": df["%CurrentSimTime"],
+            "y": df["Rel-loc-World[2]"],
+            "type": "line",
+            "name": "Z",
+        },
+    ]
 
+    grpData2 = [
+        {
+            "x": df["%CurrentSimTime"].values,
+            "y": df["Rel-speed"].values,
+            "type": "line",
+            "name": u"Speed",
+        },
+        {
+            "x": df["%CurrentSimTime"].values,
+            "y": df["Rel-vel-World[0]"].values,
+            "type": "line",
+            "name": u"Vx",
+        },
+        {
+            "x": df["%CurrentSimTime"].values,
+            "y": df["Rel-vel-World[1]"].values,
+            "type": "line",
+            "name": u"Vy",
+        },
+        {
+            "x": df["%CurrentSimTime"].values,
+            "y": df["Rel-vel-World[2]"].values,
+            "type": "line",
+            "name": u"Vz",
+        },
+    ]
 
-    demograph2 = {'id':'speed',
-                'figure':{
-                    'data': [
-                        {'x':df['%CurrentSimTime'], 'y':df['Rel-speed'], 'type': 'line', 'name': u'Speed'},
-                        {'x':df['%CurrentSimTime'], 'y':df['Rel-vel-World[0]'], 'type': 'line', 'name': u'Vx'},
-                        {'x':df['%CurrentSimTime'], 'y':df['Rel-vel-World[1]'], 'type': 'line', 'name': u'Vy'},
-                        {'x':df['%CurrentSimTime'], 'y':df['Rel-vel-World[2]'], 'type': 'line', 'name': u'Vz'},
-                        ],
-                    'layout':  {
-                        'title': 'Speed',
-                        }
-                    },
-                'style':  {
-                    'height': '300'
-                    }
-                }
+    grpData3 = [
+        {
+            "x": df["Rel-vel-World[0]"].values,
+            "y": df["Rel-speed"].values,
+            "type": "line",
+            "name": u"Speed",
+        },
+    ]
 
+    demograph1 = makedccgraph(gid="position", height=300, title="position", data=grpData1)
+    demograph2 = makedccgraph(gid="speed", height=600, title="speed", data=grpData2)
+    demograph3 = makedccgraph(gid="speedxy", height=600, title="speed", data=grpData3)
 
-    # build a page for display
-    app.layout = html.Div(children=[
-        html.H1(children='Dash Experiments'),
+    lstgraphs = [demograph1,demograph2,demograph3]
 
-        html.Div([dcc.Markdown(children='''Attempting to use *Dash* for plotting in PyQt5.''')]),
+    def makePage(pagetitle,pageheader,lstgraphs):
+        # build a page for display
+        layout = html.Div(
+            children=[
+                html.H1(children=pagetitle),
+                html.Div([dcc.Markdown(children=pageheader)]),
+                # following is a list of dcc.Graph(() graphs
+                *lstgraphs
+            ]
+        )
+        return layout
 
-        dcc.Graph(id=demograph1['id'],figure=demograph1['figure']),
-
-        dcc.Graph(id=demograph2['id'],figure=demograph2['figure'],style=demograph2['style'])
-
-        ])
-
+    pageheader = """Attempting to use *Dash* for plotting in PyQt5."""
+    pagetitle='Dash Experiments'
+    app.layout = makePage(pagetitle,pageheader,lstgraphs)
 
     # app.css.append_css({
     #     'external_url': 'https://codepen.io/chriddyp/pen/bWLwgP.css'
     # })
 
-    app.run_server(debug=False,port=8050)
+    app.run_server(debug=False, port=8050)
 
 
 class WebViewer(QtWebEngineWidgets.QWebEngineView):
@@ -107,23 +157,25 @@ class WebViewer(QtWebEngineWidgets.QWebEngineView):
         super().__init__(parent)
         page = QtWebEngineWidgets.QWebEnginePage(self)
         self.setPage(page)
-        self.setUrl(QtCore.QUrl('http://127.0.0.1:8050'))
+        self.setUrl(QtCore.QUrl("http://127.0.0.1:8050"))
+
+
 #
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     sys.argv.append("--disable-web-security")
 
-    dataSource = None # fill in later
-    mode = None # fill in later
+    dataSource = None  # fill in later
+    mode = None  # fill in later
 
-
-    threading.Thread(target=run_dash, args=(dataSource,mode), daemon=True).start()
+    threading.Thread(target=run_dash, args=(dataSource, mode), daemon=True).start()
 
     app = QtWidgets.QApplication(sys.argv)
 
     main_widget = QtWidgets.QWidget(None)
     window_layout = QtWidgets.QVBoxLayout(main_widget)
+    # window_layout.addWidget(WebViewer(main_widget))
     window_layout.addWidget(WebViewer(main_widget))
     main_widget.show()
 
