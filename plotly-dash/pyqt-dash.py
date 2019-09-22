@@ -122,12 +122,24 @@ def makePageFromCVS(configfile):
             dfilename = dft[(dft['Variable']=='Datafile')]['Value'].values[0]
             # get dataframe for this graph
             df = datafiles[dfilename]
+            # yscale
+            if 'Scale' in row:
+                if not np.isnan(row['Scale']):
+                    yscale = row['Scale']
+                else:
+                    yscale = 1.0
+            # x scale
+            if not np.isnan(dft[(dft['Variable']=='xValue')]['Scale'][0]):
+                xscale = float(dft[(dft['Variable']=='xValue')]['Scale'][0])
+            else:
+                xscale = 1.0
+                    
             # each line in each graph must be a dict as follows:
             dLines = {
-                'x':df[dft[(dft['Variable']=='xValue')].loc['xValue','Value']] * float(dft[(dft['Variable']=='xValue')]['Scale']),
-                'y':df[row['Value']] * float(row['Scale']),
+                'x':df[dft[(dft['Variable']=='xValue')].loc['xValue','Value']] * xscale,
+                'y':df[row['Value']] * yscale,
                 'type':row['GraphType'],
-                'name':row['LineLabel'],
+                # 'name':row['LineLabel'],
                 'line':{}
             }
             # print(type(row['Color']), row['Color'])
