@@ -43,6 +43,7 @@ import sys
 import threading
 import pandas as pd
 import openpyxl as oxl
+import numpy as np
 
 from PyQt5 import QtWidgets
 import PyQt5.QtCore as QtCore
@@ -54,64 +55,6 @@ import dash_html_components as html
 from dash.dependencies import Input, Output
 # import plotly.graph_objs as go
 
-
-# creates a browser widget
-class WebViewer(QtWebEngineWidgets.QWebEngineView):
-    def __init__(self, parent, url):
-        """Create a web browser widget
-
-        parent: the parent GUI element where this is included.
-        url: the url to be browsed
-        """
-        super().__init__(parent)
-        page = QtWebEngineWidgets.QWebEnginePage(self)
-        self.setPage(page)
-        self.setUrl(QtCore.QUrl(url))
-
-
-def makeDccGraph(gid, height, title, data):
-    """Builds the data structure for one set of line graphs.
-
-    id: must be unique to differentiate between graphs.
-    figure: defines the graph layout in terms of
-        title 
-        data set (a complex data structure)
-    style: defines some properties of the graph.
-
-    This function can probably be expanded for improved style
-
-    The function returns a dcc.Graph()function with parameters.
-    """
-
-    return dcc.Graph(
-                id=gid,
-                figure={'layout':{'title':title},'data':data},
-                style={'height': str(height)},
-            )
-
-
-def makeHTMLPage(pagetitle,pageheader,lstgraphs):
-    """Builds the complete page layout to be used in the browser.
-
-    pagetitle: the text displayed in H1 format at the top of page.
-    pageheader: a Markdown text block displayed immediately after 
-                the title.
-    lstgraphs: a list of data structures for the different graphs
-               on the page. The list of structures is unpacked when 
-               html.Div is called.  This means that what is passed 
-               as a list is unpacked into separate function arguments
-               by the *list operator.
-    """
-    # build a page for display
-    page = html.Div(
-        children=[
-            html.H1(children=pagetitle),
-            html.Div([dcc.Markdown(children=pageheader)]),
-            # following is a list of dcc.Graph(() graphs
-            *lstgraphs
-        ]
-    )
-    return page
 
 
 
@@ -152,7 +95,7 @@ def makePageFromCVS(configfile):
         # append this sheet to the master data frame
         dfg = dfg.append(dft)
 
-    # print(dfg)
+    print(dfg)
 
     # get data filenames in all the graphs
     datafilenames = dfg[(dfg['Variable']=='Datafile')]['Value'].unique()
@@ -163,9 +106,6 @@ def makePageFromCVS(configfile):
         # read the data file
         datafiles[datafilename] = pd.read_csv(datafilename, sep="\s+|,|;", index_col=None,engine='python')
 
-    # now we have one dataframe with the columns:
-    # Variable, Value , Name, LineType, Graph, ShtNum
-
     # get list of all graphs in dfg
     graphs = dfg['Graph'].unique()
     # lstgraphs to be used when constructing the page
@@ -175,7 +115,7 @@ def makePageFromCVS(configfile):
         # extract info for this graph
         dft = dfg[(dfg['Graph']==graph)]
         # list of all the line entries for this graph
-        grpData = []
+        graphData = []
         # build the data for all lines in this graph
         for index,row in dft[(dft['Variable']=='yValue')].iterrows():
             # get the filename for this graph
@@ -183,26 +123,54 @@ def makePageFromCVS(configfile):
             # get dataframe for this graph
             df = datafiles[dfilename]
             # each line in each graph must be a dict as follows:
-            grpData.append({
+            dLines = {
                 'x':df[dft[(dft['Variable']=='xValue')].loc['xValue','Value']] * float(dft[(dft['Variable']=='xValue')]['Scale']),
                 'y':df[row['Value']] * float(row['Scale']),
-                'type':row['LineType'],
-                'name':row['Name'],
-            })
+                'type':row['GraphType'],
+                'name':row['LineLabel'],
+                'line':{}
+            }
+            # print(type(row['Color']), row['Color'])
+            if 'Color' in row:
+                if isinstance(row['Color'], str):
+                    dLines['line']['color'] = row['Color']
+            if 'Linewidth' in row:
+                if not np.isnan(row['Linewidth']):
+                    dLines['line']['width'] = row['Linewidth']
+            if 'Dash' in row:
+                 if isinstance(row['Dash'], str):
+                    dLines['line']['dash'] = row['Dash']
+            if 'GraphType' in row:
+                 if isinstance(row['GraphType'], str):
+                    dLines['name'] = row['GraphType']
 
-        # create the plotly data structure for this graph (include title.height)
-        lstgraphs.append(makeDccGraph(gid=graph, 
-                                    height=dft.loc['Height','Value'], 
-                                    title=dft.loc['Title','Value'], 
-                                    data=grpData))
+
+            graphData.append(dLines)
+
+        # appends the graph to the list of graphs
+        lstgraphs.append(dcc.Graph(
+                id=graph,
+                figure={'layout':{'title':dft.loc['Title','Value'],
+                                'xaxis':{'title':dft.loc['xLabel','Value']},
+                                'yaxis':{'title':dft.loc['yLabel','Value']},
+                                },
+                    'data':graphData},
+                style={'height': str(dft.loc['Height','Value'])},
+            ))
 
     # get the header info from header sheet
     pageheader = dfc.loc['Pageheader','Value']
     pagetitle = dfc.loc['Pagetitle','Value']
 
-    # create the page to be renderer in the browser
-    page = makeHTMLPage(pagetitle,pageheader,lstgraphs)
-
+    # create the page to be rendered in the browser
+    page = html.Div(
+        children=[
+            html.H1(children=pagetitle),
+            html.Div([dcc.Markdown(children=pageheader)]),
+            # following is a list of dcc.Graph(() graphs
+            *lstgraphs
+        ]
+    )
     return page
 
 
@@ -223,6 +191,19 @@ def run_dash(pageLayout,port):
     # })
     app.run_server(debug=False, port=port)
 
+
+# creates a browser widget
+class WebViewer(QtWebEngineWidgets.QWebEngineView):
+    def __init__(self, parent, url):
+        """Create a web browser widget
+
+        parent: the parent GUI element where this is included.
+        url: the url to be browsed
+        """
+        super().__init__(parent)
+        page = QtWebEngineWidgets.QWebEnginePage(self)
+        self.setPage(page)
+        self.setUrl(QtCore.QUrl(url))
 
 ##########################################
 #
