@@ -29,8 +29,9 @@ conda install dash-core-components
 conda install dash-table
 conda install dash-daq
 
-Dash starts a Flask server at 8050, so the browser must be pointing to 
-localhost:8050
+Dash starts a Flask server at the specified port, so the browser must be 
+pointing to the appropriate port number
+localhost:port
 This means that once the server is running, you can view the page with 
 the PyQt browser as used here, or in an external browser.
 https://dash.plot.ly/integrating-dash
@@ -53,16 +54,19 @@ import dash_html_components as html
 from dash.dependencies import Input, Output
 # import plotly.graph_objs as go
 
+
 # creates a browser widget
 class WebViewer(QtWebEngineWidgets.QWebEngineView):
     def __init__(self, parent, url):
-        """
+        """Create a web browser widget
+
+        parent: the parent GUI element where this is included.
+        url: the url to be browsed
         """
         super().__init__(parent)
         page = QtWebEngineWidgets.QWebEnginePage(self)
         self.setPage(page)
         self.setUrl(QtCore.QUrl(url))
-
 
 
 def makeDccGraph(gid, height, title, data):
@@ -110,67 +114,65 @@ def makeHTMLPage(pagetitle,pageheader,lstgraphs):
     return page
 
 
-def run_dash(pageLayout,mode):
-    """
-    """
-    # start a dash app, which also starts a Flask server
-    app = dash.Dash()
-    # override security restrictions: allow the serving of local pages
-    app.css.config.serve_locally = True
-    app.scripts.config.serve_locally = True
-    app.layout = pageLayout
-    # app.css.append_css({
-    #     'external_url': 'https://codepen.io/chriddyp/pen/bWLwgP.css'
-    # })
-    app.run_server(debug=False, port=8050)
-
-
 
 #####################################################
 def makePageFromCVS(configfile,datafile):
+    """Create the contents to be displayed in the browser
+
+    configfile: the Excel file that defines the plots
+    datafile: contains the data to be displayed
+    """
 
     # read the data file
     df = pd.read_csv(datafile, sep="\s+", index_col=None)
-    # print(df.columns)
-    # print(df.head())
 
     #read the config file
     cxls = pd.ExcelFile(configfile)
     dfc = pd.read_excel(cxls, 'header')
     dfc = dfc.set_index('Variable')
 
-    # get a list of graph sheetnames
+    # get a list of graph sheetnames (ignore the header sheet)
     cwb =  oxl.load_workbook(configfile)
     sheetnames = [sn for sn in cwb.get_sheet_names() if 'graph' in sn]
+    # df to contain ALL the sheets' info
     dfg = pd.DataFrame()
-    # build one df with all sheets' info
+
+    # build dfg with all sheets' info
     for shtnum,sheetname in enumerate(sheetnames):
         dft = pd.read_excel(cxls, sheetname)
-        dft['Index'] = dft['Variable']
+        # add info to identify the lines associated with this sheet
         dft['Graph'] = sheetname
         dft['ShtNum'] = shtnum
-        # create unique index values
+        # create unique index values by adding number of the yValues string
+        dft['Index'] = dft['Variable']
         i = 0
         for index,row in dft.iterrows():
             if 'yValue' in row['Variable']:
                 dft.loc[index,'Index'] = f"{row['Variable']}{i:03d}"
                 i = i + 1
+        # make 'Index' column the df index
         dft = dft.set_index('Index')
+        # append this sheet to the master df
         dfg = dfg.append(dft)
 
         # now we have one df with the columns:
         # Variable, Value , Name, LineType, Graph, ShtNum
 
-    # print(dfg)
-
+    # get list of all graphs in dfg
     graphs = dfg['Graph'].unique()
+    # lstgraphs to be used when constructing the page
+    # each entry in this list is a different graph
     lstgraphs = []
     for graph in graphs:
+        # extract data for this graph
         dft = dfg[(dfg['Graph']==graph)]
+        # get name for the data used as x-values
         dfx = dft[(dft['Variable']=='xValue')]
         # for all yValue lines in this graph
         dfy = dft[(dft['Variable']=='yValue')]
+        # list of all the line entries for this graph
         grpData = []
+        # build the data for all lines in this graph
         for index,row in dfy.iterrows():
             # each line in each graph must be a dict as follows:
             grpData.append({
@@ -181,17 +183,39 @@ def makePageFromCVS(configfile,datafile):
                 'name':row['Name'],
             })
 
+        # create the plotly data structure for this graph (include title.height)
         lstgraphs.append(makeDccGraph(gid=graph, 
                                     height=dft.loc['Height','Value'], 
                                     title=dft.loc['Title','Value'], 
                                     data=grpData))
 
+    # get the header info from header sheet
     pageheader = dfc.loc['Pageheader','Value']
     pagetitle = dfc.loc['Pagetitle','Value']
 
+    # create the page to be renderer in the browser
     page = makeHTMLPage(pagetitle,pageheader,lstgraphs)
 
     return page
+
+
+def run_dash(pageLayout,port):
+    """Initiate the Dash server and serve the page
+
+    pageLayout: info the be served in Plotly data formal
+    port: port number to be used
+    """
+    # start a dash app, which also starts a Flask server
+    app = dash.Dash()
+    # override security restrictions: allow the serving of local pages
+    app.css.config.serve_locally = True
+    app.scripts.config.serve_locally = True
+    app.layout = pageLayout
+    # app.css.append_css({
+    #     'external_url': 'https://codepen.io/chriddyp/pen/bWLwgP.css'
+    # })
+    app.run_server(debug=False, port=port)
+
 
 ##########################################
 #
@@ -199,17 +223,17 @@ def makePageFromCVS(configfile,datafile):
 if __name__ == "__main__":
 
     sys.argv.append("--disable-web-security")
-
+    
+    port = '8050' # used for the local Flask server
     datafile = "data/tp05j2a.rgeo"
     configfile = 'data/pyqt-dash-config.xlsx'
     pageLayout = makePageFromCVS(configfile,datafile) 
-    mode = None # fill in later, we need this to make the thread work
-    threading.Thread(target=run_dash, args=(pageLayout,mode), daemon=True).start()
+    threading.Thread(target=run_dash, args=(pageLayout,port), daemon=True).start()
 
     app = QtWidgets.QApplication(sys.argv)
     main_widget = QtWidgets.QWidget(None)
     window_layout = QtWidgets.QVBoxLayout(main_widget)
-    window_layout.addWidget(WebViewer(main_widget,"http://127.0.0.1:8050"))
+    window_layout.addWidget(WebViewer(main_widget,f'http://127.0.0.1:{port}'))
     main_widget.show()
 
     sys.exit(app.exec_())
