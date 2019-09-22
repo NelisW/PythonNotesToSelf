@@ -116,15 +116,12 @@ def makeHTMLPage(pagetitle,pageheader,lstgraphs):
 
 
 #####################################################
-def makePageFromCVS(configfile,datafile):
+def makePageFromCVS(configfile):
     """Create the contents to be displayed in the browser
 
     configfile: the Excel file that defines the plots
-    datafile: contains the data to be displayed
-    """
 
-    # read the data file
-    df = pd.read_csv(datafile, sep="\s+", index_col=None)
+    """
 
     #read the config file
     cxls = pd.ExcelFile(configfile)
@@ -134,7 +131,7 @@ def makePageFromCVS(configfile,datafile):
     # get a list of graph sheetnames (ignore the header sheet)
     cwb =  oxl.load_workbook(configfile)
     sheetnames = [sn for sn in cwb.get_sheet_names() if 'graph' in sn]
-    # df to contain ALL the sheets' info
+    # dataframe to contain ALL the sheets' info
     dfg = pd.DataFrame()
 
     # build dfg with all sheets' info
@@ -147,16 +144,28 @@ def makePageFromCVS(configfile,datafile):
         dft['Index'] = dft['Variable']
         i = 0
         for index,row in dft.iterrows():
+            print(row['Variable'])
             if 'yValue' in row['Variable']:
                 dft.loc[index,'Index'] = f"{row['Variable']}{i:03d}"
                 i = i + 1
-        # make 'Index' column the df index
+        # make 'Index' column the index
         dft = dft.set_index('Index')
-        # append this sheet to the master df
+        # append this sheet to the master data frame
         dfg = dfg.append(dft)
 
-        # now we have one df with the columns:
-        # Variable, Value , Name, LineType, Graph, ShtNum
+    print(dfg)
+
+    # get data filenames in all the graphs
+    datafilenames = dfg[(dfg['Variable']=='Datafile')]['Value'].unique()
+    print(datafilenames)
+    # load all the data files, but only once into a dict with filename as key
+    datafiles = {}
+    for datafilename in datafilenames:
+        # read the data file
+        datafiles[datafilename] = pd.read_csv(datafilename, sep="\s+|,|;", index_col=None,engine='python')
+
+    # now we have one dataframe with the columns:
+    # Variable, Value , Name, LineType, Graph, ShtNum
 
     # get list of all graphs in dfg
     graphs = dfg['Graph'].unique()
@@ -164,8 +173,9 @@ def makePageFromCVS(configfile,datafile):
     # each entry in this list is a different graph
     lstgraphs = []
     for graph in graphs:
-        # extract data for this graph
+        # extract info for this graph
         dft = dfg[(dfg['Graph']==graph)]
+
         # get name for the data used as x-values
         dfx = dft[(dft['Variable']=='xValue')]
         # for all yValue lines in this graph
@@ -174,11 +184,16 @@ def makePageFromCVS(configfile,datafile):
         grpData = []
         # build the data for all lines in this graph
         for index,row in dfy.iterrows():
+            # get the filename for this graph
+            dfilename = dft[(dft['Variable']=='Datafile')]['Value'].values[0]
+            # get dataframe for this graph
+            df = datafiles[dfilename]
+
             # each line in each graph must be a dict as follows:
             grpData.append({
                 # 'x':df[dfx.iloc[0]['Value']],
-                'x':dft.loc['xValue','Value'],
-                'y':df[row['Value']],
+                'x':dft.loc['xValue','Value'], #/ float(row['Scale']),
+                'y':df[row['Value']], #/ float(row['Scale']),
                 'type':row['LineType'],
                 'name':row['Name'],
             })
@@ -225,9 +240,9 @@ if __name__ == "__main__":
     sys.argv.append("--disable-web-security")
     
     port = '8050' # used for the local Flask server
-    datafile = "data/tp05j2a.rgeo"
+
     configfile = 'data/pyqt-dash-config.xlsx'
-    pageLayout = makePageFromCVS(configfile,datafile) 
+    pageLayout = makePageFromCVS(configfile) 
     threading.Thread(target=run_dash, args=(pageLayout,port), daemon=True).start()
 
     app = QtWidgets.QApplication(sys.argv)
