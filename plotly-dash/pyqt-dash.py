@@ -144,7 +144,6 @@ def makePageFromCVS(configfile):
         dft['Index'] = dft['Variable']
         i = 0
         for index,row in dft.iterrows():
-            print(row['Variable'])
             if 'yValue' in row['Variable']:
                 dft.loc[index,'Index'] = f"{row['Variable']}{i:03d}"
                 i = i + 1
@@ -153,7 +152,7 @@ def makePageFromCVS(configfile):
         # append this sheet to the master data frame
         dfg = dfg.append(dft)
 
-    print(dfg)
+    # print(dfg)
 
     # get data filenames in all the graphs
     datafilenames = dfg[(dfg['Variable']=='Datafile')]['Value'].unique()
@@ -175,25 +174,18 @@ def makePageFromCVS(configfile):
     for graph in graphs:
         # extract info for this graph
         dft = dfg[(dfg['Graph']==graph)]
-
-        # get name for the data used as x-values
-        dfx = dft[(dft['Variable']=='xValue')]
-        # for all yValue lines in this graph
-        dfy = dft[(dft['Variable']=='yValue')]
         # list of all the line entries for this graph
         grpData = []
         # build the data for all lines in this graph
-        for index,row in dfy.iterrows():
+        for index,row in dft[(dft['Variable']=='yValue')].iterrows():
             # get the filename for this graph
             dfilename = dft[(dft['Variable']=='Datafile')]['Value'].values[0]
             # get dataframe for this graph
             df = datafiles[dfilename]
-
             # each line in each graph must be a dict as follows:
             grpData.append({
-                # 'x':df[dfx.iloc[0]['Value']],
-                'x':dft.loc['xValue','Value'], #/ float(row['Scale']),
-                'y':df[row['Value']], #/ float(row['Scale']),
+                'x':df[dft[(dft['Variable']=='xValue')].loc['xValue','Value']] * float(dft[(dft['Variable']=='xValue')]['Scale']),
+                'y':df[row['Value']] * float(row['Scale']),
                 'type':row['LineType'],
                 'name':row['Name'],
             })
