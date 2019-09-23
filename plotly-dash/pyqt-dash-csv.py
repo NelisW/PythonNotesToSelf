@@ -1,13 +1,16 @@
 """
 
-This script reads a CSV file with a header and an Excel config file 
-that defines the dash page layout, plotting a number of line graphs.
+This script reads an Excel config file and one or more CSV files and 
+then proceeds to create and serve a Dash portal. The page served has
+several elements, all constructed from the information provided in the 
+config file.
 
 The config file has any number of sheets where each sheet defines
 a different line graph (except for the header sheet, which defines 
 the page header.)
-Each graph sheet defines the title and height of the graph, 
+Each graph sheet defines the title and height of the graph, axes labels,
 one x-value column name and any number of y-value column names.
+Each line has a number of attributes with default values if not supplied.
 
 The data file is read and a set of Dash data structures are formed
 according to the Excel config file specifications.
@@ -15,27 +18,31 @@ according to the Excel config file specifications.
 In the present script the config filename and data filename are hard coded.
 Adapt this script according to your needs.
 
-
-https://github.com/plotly/dash-recipes
-https://github.com/plotly/dash-recipes/blob/master/multiple-hover-data.py
-https://plot.ly/python/subplots/
-
-conda config --add channels conda-forge
-conda search dash-daq --channel conda-forge
-
-conda install dash
-conda install dash-html-components
-conda install dash-core-components
-conda install dash-table
-conda install dash-daq
+See the example config file in the repository at data/pyqt-dash-config.xlsx.
 
 Dash starts a Flask server at the specified port, so the browser must be 
 pointing to the appropriate port number
 localhost:port
 This means that once the server is running, you can view the page with 
 the PyQt browser as used here, or in an external browser.
+
+There are numerous Dash and Plotly resources on the Internet:
 https://dash.plot.ly/integrating-dash
 https://www.datacamp.com/community/tutorials/learn-build-dash-python
+https://github.com/plotly/dash-recipes
+https://github.com/plotly/dash-recipes/blob/master/multiple-hover-data.py
+https://plot.ly/python/subplots/
+
+This script requires openpyxl, PyQt5, numpy, pandas, plotly and dash modules.
+
+To install dash when connected to the internet:
+conda config --add channels conda-forge
+conda search dash-daq --channel conda-forge
+conda install dash
+conda install dash-html-components
+conda install dash-core-components
+conda install dash-table
+conda install dash-daq
 
 """
 
@@ -56,14 +63,11 @@ from dash.dependencies import Input, Output
 # import plotly.graph_objs as go
 
 
-
-
 #####################################################
 def makePageFromCVS(configfile):
     """Create the contents to be displayed in the browser
 
     configfile: the Excel file that defines the plots
-
     """
 
     #read the config file
@@ -73,7 +77,8 @@ def makePageFromCVS(configfile):
 
     # get a list of graph sheetnames (ignore the header sheet)
     cwb =  oxl.load_workbook(configfile)
-    sheetnames = [sn for sn in cwb.get_sheet_names() if 'graph' in sn]
+    # sheetnames = [sn for sn in cwb.get_sheet_names() if 'graph' in sn]
+    sheetnames = [sn for sn in cwb.sheetnames if 'graph' in sn]
     # dataframe to contain ALL the sheets' info
     dfg = pd.DataFrame()
 
@@ -95,11 +100,11 @@ def makePageFromCVS(configfile):
         # append this sheet to the master data frame
         dfg = dfg.append(dft)
 
-    print(dfg)
+    # print(dfg)
 
     # get data filenames in all the graphs
     datafilenames = dfg[(dfg['Variable']=='Datafile')]['Value'].unique()
-    print(datafilenames)
+
     # load all the data files, but only once into a dict with filename as key
     datafiles = {}
     for datafilename in datafilenames:
@@ -122,6 +127,7 @@ def makePageFromCVS(configfile):
             dfilename = dft[(dft['Variable']=='Datafile')]['Value'].values[0]
             # get dataframe for this graph
             df = datafiles[dfilename]
+
             # yscale
             if 'Scale' in row:
                 if not np.isnan(row['Scale']):
@@ -138,29 +144,36 @@ def makePageFromCVS(configfile):
             dLines = {
                 'x':df[dft[(dft['Variable']=='xValue')].loc['xValue','Value']] * xscale,
                 'y':df[row['Value']] * yscale,
-                'type':row['GraphType'],
-                # 'name':row['LineLabel'],
                 'line':{}
             }
-            # print(type(row['Color']), row['Color'])
-            if 'Color' in row:
-                if isinstance(row['Color'], str):
-                    dLines['line']['color'] = row['Color']
-            if 'Linewidth' in row:
-                if not np.isnan(row['Linewidth']):
-                    dLines['line']['width'] = row['Linewidth']
-            if 'Dash' in row:
-                 if isinstance(row['Dash'], str):
-                    dLines['line']['dash'] = row['Dash']
-            if 'GraphType' in row:
-                 if isinstance(row['GraphType'], str):
-                    dLines['name'] = row['GraphType']
 
+            # fill in non-default values
+            if not np.isnan(row['Linewidth']):
+                dLines['line']['width'] = row['Linewidth']
 
+            if isinstance(row['Colour'], str):
+                dLines['line']['color'] = row['Colour']
+
+            if isinstance(row['Dash'], str):
+                dLines['line']['dash'] = row['Dash']
+
+            if isinstance(row['GraphType'], str):
+                dLines['type'] = row['GraphType']
+
+            if isinstance(row['LineLabel'], str):
+                dLines['name'] = row['LineLabel']
+            else:
+                dLines['name'] = row['Value']
+
+            # add this line to other lines in this graph
             graphData.append(dLines)
 
-        # appends the graph to the list of graphs
-        lstgraphs.append(dcc.Graph(
+        # appends the graph blocks to the list of graphs (top, graph, bottom)
+        # append the text at the top of the graph
+        if 'GraphTop' in dft.index:
+            lstgraphs.append(html.Div([dcc.Markdown(children=dft.loc['GraphTop','Value'])]))
+        # append the actual graph
+        lstgraphs.append(html.Div([dcc.Graph(
                 id=graph,
                 figure={'layout':{'title':dft.loc['Title','Value'],
                                 'xaxis':{'title':dft.loc['xLabel','Value']},
@@ -168,19 +181,24 @@ def makePageFromCVS(configfile):
                                 },
                     'data':graphData},
                 style={'height': str(dft.loc['Height','Value'])},
-            ))
+            )]))
+        # append the text at the bottom of the graph
+        if 'GraphBottom' in dft.index:
+            lstgraphs.append(html.Div([dcc.Markdown(children=dft.loc['GraphBottom','Value'])]))
 
     # get the header info from header sheet
-    pageheader = dfc.loc['Pageheader','Value']
-    pagetitle = dfc.loc['Pagetitle','Value']
+    pagetitle = dfc.loc['Pagetitle','Value'] if 'Pagetitle' in dfc.index else ''
+    pagetop = dfc.loc['PageTop','Value'] if 'PageTop' in dfc.index else ''
+    pagebottom = dfc.loc['PageBottom','Value'] if 'PageBottom' in dfc.index else ''
 
     # create the page to be rendered in the browser
     page = html.Div(
         children=[
             html.H1(children=pagetitle),
-            html.Div([dcc.Markdown(children=pageheader)]),
+            html.Div([dcc.Markdown(children=pagetop)]),
             # following is a list of dcc.Graph(() graphs
-            *lstgraphs
+            *lstgraphs,
+            html.Div([dcc.Markdown(children=pagebottom)]),
         ]
     )
     return page
