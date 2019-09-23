@@ -44,6 +44,25 @@ conda install dash-core-components
 conda install dash-table
 conda install dash-daq
 
+A recent off-line install required the following packages to be manually installed.
+conda install dash-0.39.0-py_0.tar.bz2
+conda install flask-compress-1.4.0-py_0.tar.bz2
+conda install plotly-4.1.1-py_0.tar.bz2
+conda install dash-html-components-0.14.0-py_0.tar.bz2
+conda install dash-core-components-0.44.0-py_0.tar.bz2
+conda install dash-table-3.6.0-py_0.tar.bz2
+conda install dash-daq-0.1.4-py_0.tar.bz2
+conda install plotly-orca-1.2.1-1.tar.bz2
+conda install retrying-1.3.3-py36_1.tar.bz2
+conda install dash-renderer-0.20.0-py_0.tar.bz2
+Plotly packages seem to be here:  
+https://anaconda.org/plotly  
+https://anaconda.org/plotly/repo  
+There are 17 packages, located under the package name, Files tab:
+https://anaconda.org/plotly/plotly/files  
+or   
+https://anaconda.org/plotly/dash/files 
+
 """
 
 import sys
