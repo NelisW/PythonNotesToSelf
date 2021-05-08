@@ -1,30 +1,16 @@
 import glob
 import re
 import os
+from os import path
 
-lstR = [' - libgen.li',' - libgen.lc','-Verlag Berlin Heidelberg)',' International Publishing',
-        '-Verlag Berlin Heidelberg',' Singapore_Springer',', New Society Publishers',
-        ', CreateSpace Independent Publishing Platform',', Random House',
-        ', Packt Publishing Ltd',', Packt Publishing Pvt. Ltd.',', Packt Publishing',
-        ', Routledge_Taylor & Francis Group',', Routledge',', Addison-Wesley',' Singapore_Springer',
-        ', Springer US',
-        ', Financial Times_Prentice Hall',', Skyhorse Publishing','-IEEE Press',
-        ', Mc Graw Hill India','-Verlag Berlin Heidelberg',', Harper Design',
-        ', Oxmoor House_Time Home Entertainment',', Publishing House W. Ennsthaler',
-        ', HarperCollins_Harper Design',', PublishDrive',', Stanford University Press',
-        ', DESIGN MEDIA PUBLISHING LIMITED',', Zuleika', ', Princeton Architectural Press',
-        ', Links',', Think Publishing',', Universal Magazines',', Links International',
-        ', Elsevier _ Architectural Press',', Quarry Books',', Springer',', Architectural Press',
-        ', CRC Press',', Bloomsbury Publishing',', InTech',', Liaoning Science & Technology Pub. House',
-        ', Jenny Stanford Publishing',', Wiley',', Tilt Development',', LST Publishing House, Professional Design press',
-        ', Actrace_Profession Design Press Co., Ltd',', Artech House',' India Ltd._',' India',' International',
-        ', Mcgraw-Hill',', China Machine Press'        ]
+lstR = [' - libgen.li','- libgen.li',' - libgen.lc','- libgen.lc','- libgen.lc', '- libgen.li'
+                ]
 
-lstX = [r'\(Editor\)','\(auth\)','\(auth.\)','\(Author\)','\(author\)','\(Ed.\)',
-        '\(eds.\)','^\[.*\]'
+lstX = [r'\(Editor\)',r'\(editor\)','\(auth\)','\(auth.\)','\(Author\)','\(author\)','\(Ed.\)',
+        '\(eds.\)','^\[.*?\]','^\(.*?\)',
 ]
 
-for fext in ['*.pdf','*.epub','*.djvu']:
+for fext in ['*.pdf','*.epub','*.djvu','*.mobi','*.azw3']:
     for name in glob.glob(fext):
         mname = name
         for bad in lstR:
@@ -34,11 +20,20 @@ for fext in ['*.pdf','*.epub','*.djvu']:
             if re.search(rex,mname):
                 mname = re.sub(rex,'',mname)
 
-        mname = re.sub('^\s*','',mname)
+        # get rid of publisher name in date ()
+        dategr = re.search('\((\d\d\d\d).*\)\s*\.', mname, re.IGNORECASE)
+        if dategr:
+            datestr = dategr.group(1)
+            mname = re.sub('\(\d\d\d\d.*\)\s*\.',f'({datestr}).',mname)
 
-
-        os.rename(name,mname)
-        print(mname)
+        if not path.exists(mname):
+            os.rename(name,mname)
+            # print(name)
+            print(mname)
+            # print('--------------------------')
+        else:
+            print(f'*** repeat name: {mname}')
+            
 
 
 
